@@ -22,7 +22,7 @@ deepseek-harness(`dsh`)的桌面端外壳:以官方扩展方式(自定义 profil
 apps/desktop/             Electron 入口(main / preload),无业务逻辑
 packages/desktop-bundle/  dsh.bundle 包: host 插件 + cordis.patch.yml
 packages/desktop-client/  client 插件(IPC 传输等,可选)
-packages/desktop-profile/ dsh.profile 定义(bundles = [dsh-base, desktop-bundle])
+packages/desktop-profile/ dsh.profile 定义(bundles = [dsh-base, dsh-web-app, desktop-bundle])
 ```
 
 ## 常用命令(规划中)
@@ -31,6 +31,24 @@ packages/desktop-profile/ dsh.profile 定义(bundles = [dsh-base, desktop-bundle
 - `pnpm dev` 开发模式
 - `pnpm build` 构建
 - `pnpm dist` 打包分发(electron-builder)
+
+## 提交规范
+
+- 所有提交必须符合 header 格式 `<type>(<scope>): <description>`,缺一不可。
+- `type` 使用英文(如 feat / fix / docs / chore / refactor / test / build / perf / style)。
+- `scope` 使用中文(如 desktop / bundle / profile / wiki / docs)。
+- `description` 使用中文、现在时祈使语气(如"添加 X"而非"添加了 X"),无句号,长度小于 72 字符。
+- 所有提交必须包含 body,body 仅使用 `-` Markdown 列表描述变更要点,不使用段落。
+
+示例:
+
+```
+docs(wiki): 补充 dsh-TUI 调研与提交规范
+
+- 新增 research/dsh-tui-reference.md 记录社区参考结论
+- 修正 desktop profile 的 bundles 组合为 [dsh-base, dsh-web-app, desktop-bundle]
+- 添加提交规范章节,统一提交信息格式
+```
 
 ## 项目知识库
 

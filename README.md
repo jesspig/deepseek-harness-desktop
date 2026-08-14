@@ -26,7 +26,7 @@
 apps/desktop/            Electron 入口(仅进程宿主,无业务逻辑)
 packages/desktop-bundle/ dsh.bundle 包: host 插件(窗口/托盘/生命周期/更新)+ cordis.patch.yml
 packages/desktop-client/ client 插件(IPC 传输、桌面专属 UI,可选)
-packages/desktop-profile/ dsh.profile 定义(bundles = [dsh-base, desktop-bundle])
+packages/desktop-profile/ dsh.profile 定义(bundles = [dsh-base, dsh-web-app, desktop-bundle])
 ```
 
 ## 上游参考

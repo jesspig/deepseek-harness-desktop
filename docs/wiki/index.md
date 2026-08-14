@@ -14,11 +14,15 @@ deepseek-harness(`dsh`)桌面端外壳的增量维护知识库。当前仓库处
 - [electron-host(规划)](modules/electron-host.md) — Electron 入口(main / preload),仅进程宿主
 - [desktop-bundle(规划)](modules/desktop-bundle.md) — host 插件(窗口/托盘/生命周期/更新)+ cordis.patch.yml
 - [desktop-client(规划,可选)](modules/desktop-client.md) — client 插件(IPC 传输、桌面专属 UI)
-- [desktop-profile(规划)](modules/desktop-profile.md) — dsh.profile 定义(bundles = [dsh-base, desktop-bundle])
+- [desktop-profile(规划)](modules/desktop-profile.md) — dsh.profile 定义(bundles = [dsh-base, dsh-web-app, desktop-bundle])
 
 ## 配置
 
 - [构建与工具链约定](config/build-tooling.md) — 由 .gitignore 反映的 pnpm / Vite / electron-builder / nyc 事实
+
+## 研究
+
+- [dsh-TUI 社区参考调研](research/dsh-tui-reference.md) — dsh-cc-tui 插件调研:形态验证、dsh plugin add 机制、发布模式、对桌面端的启示
 
 ## 维护
 

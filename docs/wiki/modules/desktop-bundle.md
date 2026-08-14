@@ -19,7 +19,7 @@ timestamp: 2026-08-14
 
 ## 位置与作用(规划)
 
-- 被 [desktop-profile](desktop-profile.md) 以 `bundles = [dsh-base, desktop-bundle]` 引用
+- 被 [desktop-profile](desktop-profile.md) 以 `bundles = [dsh-base, dsh-web-app, desktop-bundle]` 引用
 - 与 [electron-host](electron-host.md) 配合完成桌面外壳能力
 - 桌面能力(窗口、托盘、原生通知、`dsh://` 协议、开机自启、自动更新)一律以插件形式实现,受 [constraints.md](../project/constraints.md) 安全默认约束
 

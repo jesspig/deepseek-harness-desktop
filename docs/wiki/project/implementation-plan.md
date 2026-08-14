@@ -66,7 +66,7 @@ M0 验收通过后才启动 M1([milestones.md](milestones.md) 同口径)。
 apps/desktop/             Electron 入口(main / preload),仅进程宿主,无业务逻辑
 packages/desktop-bundle/  dsh.bundle 包:host 插件(托盘/通知/生命周期/更新)+ cordis.patch.yml
 packages/desktop-client/  client 插件(IPC 传输、桌面专属 UI;可选,M0 不需要)
-packages/desktop-profile/ dsh.profile 定义(bundles = [dsh-base, desktop-bundle])
+packages/desktop-profile/ dsh.profile 定义(bundles = [dsh-base, dsh-web-app, desktop-bundle])
 ```
 
 ## M0 详细实施步骤
@@ -104,7 +104,7 @@ profile 分发两方案,**先 B 后 A**:
 
 - **方案 B(M0 最小闭环,先做)**:复用官方 `web` profile,Electron 以 `--profile web` 启动,先验证 spawn + URL 解析闭环;桌面专属配置暂以 patch 注入。
 - **方案 A(正式形态,后续切换)**:定义 `packages/desktop-profile/` 模板:
-  - `package.json` 声明 `"dsh": { "profile": { "bundles": ["@deepseek-ai/dsh-base", "<desktop-bundle 包名>"] } }` + out-of-tree 依赖;
+  - `package.json` 声明 `"dsh": { "profile": { "bundles": ["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-web-app", "<desktop-bundle 包名>"] } }` + out-of-tree 依赖;`dsh-web-app` 必须包含(官方 Web UI / webServer / URL 就绪行的提供者,官方 `web` 模板即 `[dsh-base, dsh-web-app]`);
   - 首次运行由 Electron 将模板写入 `$DSH_HOME/profiles/desktop/`(参照官方 web / headless 模板自动初始化机制),`desktop-bundle` 装入该 profile 的 node_modules —— 官方支持的 out-of-tree 路径。
 
 ### M0.4 desktop-bundle(cordis.patch.yml 模板)
