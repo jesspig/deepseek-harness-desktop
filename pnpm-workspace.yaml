@@ -1,0 +1,14 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+nodeLinker: hoisted
+
+allowBuilds:
+  '@deepseek-ai/dsh-subprocess-local': true
+  '@google/genai': true
+  electron: true
+  electron-winstaller: true
+  koffi: true
+  node-pty: true
+  protobufjs: true
