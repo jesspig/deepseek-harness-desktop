@@ -1,0 +1,13 @@
+{
+  "name": "deepseek-harness-desktop",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @dsh-desktop/app dev",
+    "build": "pnpm --filter @dsh-desktop/app build",
+    "dist": "pnpm --filter @dsh-desktop/app dist"
+  },
+  "engines": {
+    "node": "^22.19 || >=24"
+  }
+}

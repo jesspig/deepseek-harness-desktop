@@ -6,6 +6,8 @@
 
 deepseek-harness(`dsh`)的桌面端外壳:以官方扩展方式(自定义 profile + bundle + Cordis 插件)实现,不改上游仓库。
 
+当前状态:M0 薄壳已实施完成并通过验收(`apps/desktop/` Electron 入口、`packages/desktop-bundle/` 最小 host 插件、`packages/desktop-profile/template/` profile 模板);待用户验证配置 API Key 后的对话全链路。上游 dsh 处于 developer preview(0.1.0-rc.x),依赖精确锁定。
+
 ## 硬约束
 
 - **不改上游**: 不得 fork 或 patch `deepseek-harness`。只依赖 npm 官方发布物(`@deepseek-ai/*`)。
@@ -14,21 +16,46 @@ deepseek-harness(`dsh`)的桌面端外壳:以官方扩展方式(自定义 profil
 - **稳定面优先**: 优先使用官方服务(`webServer` / `agents` / `sessions` / `jobs`)与稳定协议(stdout URL 行、/api Connection、DSH_HOME 布局),少依赖树内内部函数。
 - **安全默认**: 仅 loopback 通信;加载 URL 前校验来源;renderer 不开 nodeIntegration;外链一律交给系统打开。
 
-## 仓库布局(规划)
+## 仓库布局(现状)
 
 ```text
-apps/desktop/             Electron 入口(main / preload),无业务逻辑
-packages/desktop-bundle/  dsh.bundle 包: host 插件 + cordis.patch.yml
-packages/desktop-client/  client 插件(IPC 传输等,可选)
-packages/desktop-profile/ dsh.profile 定义(bundles = [dsh-base, desktop-bundle])
+apps/desktop/             Electron 入口(main / preload / log / singleton / lifecycle / window / profile / dsh/process),无业务逻辑;scripts/ 含打包脚本
+packages/desktop-bundle/  dsh.bundle 包(@dsh-desktop/bundle):host 插件占位 + cordis.patch.yml
+packages/desktop-client/  client 插件(IPC 传输等,可选,未实现,仅占位目录)
+packages/desktop-profile/ dsh.profile 定义(template/ 三清单文件,bundles = [dsh-base, dsh-web-app, @dsh-desktop/bundle])
 ```
 
-## 常用命令(规划中)
+## 常用命令
 
 - `pnpm install` 安装依赖
-- `pnpm dev` 开发模式
+- `pnpm dev` 开发模式(tsc + electron,使用 PATH 中 dsh)
 - `pnpm build` 构建
-- `pnpm dist` 打包分发(electron-builder)
+- `pnpm dist` 打包分发(pack-dsh.mjs + electron-builder,NSIS)
+
+## 提交规范
+
+- 所有提交必须符合 header 格式 `<type>(<scope>): <description>`,缺一不可。
+- `type` 使用英文(如 feat / fix / docs / chore / refactor / test / build / perf / style)。
+- `scope` 使用中文(如 desktop / bundle / profile / wiki / docs)。
+- `description` 使用中文、现在时祈使语气(如"添加 X"而非"添加了 X"),无句号,长度小于 72 字符。
+- 所有提交必须包含 body,body 仅使用 `-` Markdown 列表描述变更要点,不使用段落。
+
+示例:
+
+```
+docs(wiki): 补充 dsh-TUI 调研与提交规范
+
+- 新增 research/dsh-tui-reference.md 记录社区参考结论
+- 修正 desktop profile 的 bundles 组合为 [dsh-base, dsh-web-app, desktop-bundle]
+- 添加提交规范章节,统一提交信息格式
+```
+
+## 项目知识库
+
+- 位置: `docs/wiki/`,入口为 `docs/wiki/index.md`,更新摘要见 `docs/wiki/log.md`。
+- 格式: 每个概念一个 `.md` 文件,必须含 YAML frontmatter(`type` 必需,同类概念 type 一致);`index.md` 与 `log.md` 为保留文件,不含 frontmatter。
+- 更新规则: 增量维护,仅更新受影响页面;按需更新(功能完成 / 交付操作指南 / 提交前),微调不更新;每日明细写入 `docs/wiki/changelog/<YYYY-MM-DD>-log.md`,同一小时内的更新合并为一个 `<YYYY-MM-DD>-<HH>` 小节;`log.md` 摘要按天合并(同一天仅一条),仅保留最近 7 条。
+- 事实纪律: 一切内容基于实际源码,严禁推测;规划未实现的内容标注 `> [!todo] 待补充`;页面间用相对路径互链。
 
 ## 参考(上游仓库)
 
