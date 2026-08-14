@@ -2,8 +2,8 @@
 type: Project
 title: 项目概览
 description: deepseek-harness(dsh)的桌面端外壳,以官方扩展方式实现,不改上游仓库
-tags: [dsh, electron, cordis, 骨架阶段]
-timestamp: 2026-08-14
+tags: [dsh, electron, cordis, m0]
+timestamp: 2026-08-15
 ---
 
 # 项目概览
@@ -14,9 +14,10 @@ timestamp: 2026-08-14
 
 ## 当前状态
 
-- 骨架初始化中,**M0 未开始**;仓库仅含 `README.md`、`AGENTS.md`、`.gitignore`、`LICENSE` 四个文件,无源码、无依赖清单。
-- 上游 dsh 处于 developer preview(README 记 `0.1.0-rc.x`,占位级描述)。
-- "未开始"由仓库无实现代码推断,具体里程碑进度见 [milestones.md](milestones.md)。
+- **M0 薄壳已实施完成并通过验收**:双击启动 → 窗口加载官方 Web UI(HTTP 200);URL loopback 校验;关窗无残留进程;数据落盘 DSH_HOME;子进程崩溃弹窗 + 日志可查;单例锁。唯一待用户验证项:配置 API Key 后的对话全链路。
+- 实现资产:`apps/desktop/`(Electron 入口)、`packages/desktop-bundle/`(最小 host 插件)、`packages/desktop-profile/template/`(profile 模板)、`apps/desktop/scripts/`(构建脚本)。
+- 上游 dsh 处于 developer preview,仓库精确锁定 `@deepseek-ai/dsh@0.1.0-rc.6`。
+- 里程碑进度见 [milestones.md](milestones.md),实施细节见 [implementation-plan.md](implementation-plan.md)。
 
 ## 设计原则
 
@@ -29,8 +30,10 @@ timestamp: 2026-08-14
 
 | 决策 | 说明 |
 |---|---|
-| 知识库位置 | 仓库无在线文档框架,按规则新建 `../index.md` 所在目录,与 README 并存 |
-| 包管理器 | pnpm(依据 `.gitignore` 的 `.pnpm-store/`,详见 [build-tooling.md](../config/build-tooling.md)) |
+| 知识库位置 | 仓库无在线文档框架,按规则新建 `docs/wiki/`,与 README 并存 |
+| 包管理器 | pnpm workspace(`pnpm-workspace.yaml` + `pnpm-lock.yaml`,详见 [build-tooling.md](../config/build-tooling.md)) |
+| dsh 版本 | 精确锁定 `@deepseek-ai/dsh@0.1.0-rc.6`(见 [constraints.md](constraints.md)) |
+| 打包形态 | 开发模式直接 `pnpm dev` 用系统 dsh;打包版以 `ELECTRON_RUN_AS_NODE` 模式执行随包分发的 dsh 依赖树(见 [build-tooling.md](../config/build-tooling.md)) |
 
 ## 相关页面
 
