@@ -6,7 +6,7 @@
 
 deepseek-harness(`dsh`)的桌面端外壳:以官方扩展方式(自定义 profile + bundle + Cordis 插件)实现,不改上游仓库。
 
-当前状态:骨架初始化中(M0 未开始),仓库仅含 `README.md`、`AGENTS.md`、`.gitignore`、`LICENSE` 四个文本文件,无源码与依赖清单。
+当前状态:M0 薄壳已实施完成并通过验收(`apps/desktop/` Electron 入口、`packages/desktop-bundle/` 最小 host 插件、`packages/desktop-profile/template/` profile 模板);待用户验证配置 API Key 后的对话全链路。上游 dsh 处于 developer preview(0.1.0-rc.x),依赖精确锁定。
 
 ## 硬约束
 
@@ -16,21 +16,21 @@ deepseek-harness(`dsh`)的桌面端外壳:以官方扩展方式(自定义 profil
 - **稳定面优先**: 优先使用官方服务(`webServer` / `agents` / `sessions` / `jobs`)与稳定协议(stdout URL 行、/api Connection、DSH_HOME 布局),少依赖树内内部函数。
 - **安全默认**: 仅 loopback 通信;加载 URL 前校验来源;renderer 不开 nodeIntegration;外链一律交给系统打开。
 
-## 仓库布局(规划)
+## 仓库布局(现状)
 
 ```text
-apps/desktop/             Electron 入口(main / preload),无业务逻辑
-packages/desktop-bundle/  dsh.bundle 包: host 插件 + cordis.patch.yml
-packages/desktop-client/  client 插件(IPC 传输等,可选)
-packages/desktop-profile/ dsh.profile 定义(bundles = [dsh-base, dsh-web-app, desktop-bundle])
+apps/desktop/             Electron 入口(main / preload / log / singleton / lifecycle / window / profile / dsh/process),无业务逻辑;scripts/ 含打包脚本
+packages/desktop-bundle/  dsh.bundle 包(@dsh-desktop/bundle):host 插件占位 + cordis.patch.yml
+packages/desktop-client/  client 插件(IPC 传输等,可选,未实现,仅占位目录)
+packages/desktop-profile/ dsh.profile 定义(template/ 三清单文件,bundles = [dsh-base, dsh-web-app, @dsh-desktop/bundle])
 ```
 
-## 常用命令(规划中)
+## 常用命令
 
 - `pnpm install` 安装依赖
-- `pnpm dev` 开发模式
+- `pnpm dev` 开发模式(tsc + electron,使用 PATH 中 dsh)
 - `pnpm build` 构建
-- `pnpm dist` 打包分发(electron-builder)
+- `pnpm dist` 打包分发(pack-dsh.mjs + electron-builder,NSIS)
 
 ## 提交规范
 
