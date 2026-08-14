@@ -1,0 +1,27 @@
+appId: com.dshdesktop.app
+productName: DeepSeek Harness Desktop
+
+directories:
+  output: release/
+
+files:
+  - dist/**
+  - package.json
+
+asar: true
+
+extraResources:
+  - from: release-resources/node_modules
+    to: node_modules
+  - from: ../../packages/desktop-profile/template
+    to: template
+
+npmRebuild: false
+
+win:
+  target:
+    - target: nsis
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true

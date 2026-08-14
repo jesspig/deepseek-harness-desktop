@@ -1,0 +1,5 @@
+# desktop-bundle patch: adds the desktop host plugin row over the base/web-app layers.
+
+- insert:
+  - id: desktop-host
+    name: '@dsh-desktop/bundle'
