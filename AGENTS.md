@@ -36,7 +36,7 @@ packages/desktop-profile/ dsh.profile 定义(bundles = [dsh-base, desktop-bundle
 
 - 位置: `docs/wiki/`,入口为 `docs/wiki/index.md`,更新摘要见 `docs/wiki/log.md`。
 - 格式: 每个概念一个 `.md` 文件,必须含 YAML frontmatter(`type` 必需,同类概念 type 一致);`index.md` 与 `log.md` 为保留文件,不含 frontmatter。
-- 更新规则: 增量维护,仅更新受影响页面;按需更新(功能完成 / 交付操作指南 / 提交前),微调不更新;每日明细写入 `docs/wiki/changelog/<YYYY-MM-DD>-log.md`(条目精确到小时),`log.md` 摘要仅保留最近 7 条。
+- 更新规则: 增量维护,仅更新受影响页面;按需更新(功能完成 / 交付操作指南 / 提交前),微调不更新;每日明细写入 `docs/wiki/changelog/<YYYY-MM-DD>-log.md`,同一小时内的更新合并为一个 `<YYYY-MM-DD>-<HH>` 小节;`log.md` 摘要按天合并(同一天仅一条),仅保留最近 7 条。
 - 事实纪律: 一切内容基于实际源码,严禁推测;规划未实现的内容标注 `> [!todo] 待补充`;页面间用相对路径互链。
 
 ## 参考(上游仓库)

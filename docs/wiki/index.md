@@ -6,6 +6,7 @@ deepseek-harness(`dsh`)桌面端外壳的增量维护知识库。当前仓库处
 
 - [项目概览](project/overview.md) — 项目定位、当前状态、设计原则
 - [里程碑规划](project/milestones.md) — M0 薄壳与 M1+ 进程内组合的形态演进
+- [详细实施方案](project/implementation-plan.md) — M0/M1 分阶段实施步骤、上游机制核实结论、验收标准
 - [硬约束](project/constraints.md) — 不改上游、版本锁定、安全默认等五项约束
 
 ## 模块

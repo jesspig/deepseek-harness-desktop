@@ -26,6 +26,7 @@ timestamp: 2026-08-14
 ## 相关页面
 
 - [项目概览](overview.md)
+- [详细实施方案](implementation-plan.md)
 - [electron-host 模块](../modules/electron-host.md)
 - [desktop-bundle 模块](../modules/desktop-bundle.md)
 - [目录入口](../index.md)
