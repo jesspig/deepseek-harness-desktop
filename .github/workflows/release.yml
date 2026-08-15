@@ -1,0 +1,131 @@
+# 三平台自动打包发布:tag 触发(vX.Y.Z 与 X.Y.Z 均兼容),四 job 并行构建,
+# Windows x64 / Linux x64 / macOS x64(Intel)+ arm64(Apple Silicon)产物
+# 汇总后发布 GitHub Release。
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      - '*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build (${{ matrix.platform }} ${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macos-13 为 Intel x64 runner,macos-14 为 Apple Silicon arm64
+          - os: windows-latest
+            platform: windows
+            arch: x64
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+          - os: macos-13
+            platform: mac
+            arch: x64
+          - os: macos-14
+            platform: mac
+            arch: arm64
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.17.0
+          cache: pnpm
+
+      - name: 安装 Node 24
+        uses: actions/setup-node@v4
+        with:
+          # 缓存由 pnpm/action-setup 管理,此处不重复配置避免冲突
+          node-version: 24
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 编译 bundle
+        run: pnpm --filter @dsh-desktop/bundle build
+
+      - name: 安装 dsh CLI
+        run: npm install -g @deepseek-ai/dsh@0.1.0-rc.6
+
+      - name: 注入 tag 版本
+        run: node apps/desktop/scripts/set-version.mjs "${{ github.ref_name }}"
+
+      - name: 生成 profile 模板
+        run: node apps/desktop/scripts/generate-profile.mjs --dsh-bin dsh --out packages/desktop-profile/template --home "${{ runner.temp }}/dsh-profile-home" --bundle "${{ github.workspace }}/packages/desktop-bundle"
+
+      # electron-builder 缓存按平台分目录缓存(Windows 与 POSIX 缓存位置不同)
+      - name: 缓存 electron-builder(Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/cache@v4
+        with:
+          path: '%LOCALAPPDATA%\electron-builder\Cache'
+          key: electron-builder-${{ runner.os }}
+          restore-keys: |
+            electron-builder-${{ runner.os }}
+
+      - name: 缓存 electron-builder(POSIX)
+        if: matrix.os != 'windows-latest'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/electron-builder
+          key: electron-builder-${{ runner.os }}
+          restore-keys: |
+            electron-builder-${{ runner.os }}
+
+      - name: 构建打包
+        run: pnpm --filter @dsh-desktop/app dist
+
+      # 只传安装包,不传 win-unpacked 等中间目录
+      - name: 上传产物(Windows)
+        if: matrix.platform == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.blockmap
+          if-no-files-found: error
+
+      - name: 上传产物(Linux)
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+          if-no-files-found: error
+
+      - name: 上传产物(macOS)
+        if: matrix.platform == 'mac'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-${{ matrix.arch }}
+          path: apps/desktop/release/*.dmg
+          if-no-files-found: error
+
+  release:
+    name: publish release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: 下载全部产物
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: 发布 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*

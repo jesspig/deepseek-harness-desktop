@@ -18,6 +18,12 @@ extraResources:
 
 npmRebuild: false
 
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Development
+
 win:
   target:
     - target: nsis
@@ -25,3 +31,8 @@ win:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+
+mac:
+  target:
+    - dmg
+  category: public.app-category.developer-tools
