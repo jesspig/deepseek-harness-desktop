@@ -3,3 +3,5 @@
 - insert:
   - id: desktop-host
     name: '@dsh-desktop/bundle'
+  - id: desktop-client
+    name: '@dsh-desktop/client'
