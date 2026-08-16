@@ -61,7 +61,7 @@ function ensurePackageLink(target: string, linkPath: string): void {
   }
   if (stat) {
     if (stat.isSymbolicLink()) {
-      if (fs.existsSync(linkPath)) {
+      if (fs.existsSync(linkPath) && linkTargetMatches(linkPath, target)) {
         return;
       }
       fs.rmSync(linkPath, { force: true });
@@ -70,4 +70,13 @@ function ensurePackageLink(target: string, linkPath: string): void {
     }
   }
   fs.symlinkSync(target, linkPath, process.platform === "win32" ? "junction" : "dir");
+}
+
+/** 解析链接真实目标并与期望目标比较;任一侧不可解析视为不一致 */
+function linkTargetMatches(linkPath: string, expectedTarget: string): boolean {
+  try {
+    return fs.realpathSync(linkPath) === fs.realpathSync(expectedTarget);
+  } catch {
+    return false;
+  }
 }
