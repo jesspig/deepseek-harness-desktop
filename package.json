@@ -3,9 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter @dsh-desktop/app dev",
-    "build": "pnpm --filter @dsh-desktop/app build",
-    "dist": "pnpm --filter @dsh-desktop/app dist"
+    "dev": "pnpm --filter @dsh-desktop/bundle build && pnpm --filter @dsh-desktop/client build && pnpm --filter @dsh-desktop/app dev",
+    "build": "pnpm --filter @dsh-desktop/bundle build && pnpm --filter @dsh-desktop/client build && pnpm --filter @dsh-desktop/app build",
+    "package": "pnpm --filter @dsh-desktop/bundle build && pnpm --filter @dsh-desktop/client build && pnpm --filter @dsh-desktop/app dist",
+    "dist": "pnpm --filter @dsh-desktop/bundle build && pnpm --filter @dsh-desktop/client build && pnpm --filter @dsh-desktop/app dist"
   },
   "engines": {
     "node": "^22.19 || >=24"
