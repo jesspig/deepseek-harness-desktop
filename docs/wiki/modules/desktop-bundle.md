@@ -1,10 +1,10 @@
 ---
 type: Module
-title: desktop-bundle(已实现,占位)
+title: desktop-bundle(已实现)
 description: dsh.bundle 包 @dsh-desktop/bundle,host 插件占位 + cordis.patch.yml 声明 dsh.bundle.patch
 resource: ../../../packages/desktop-bundle/cordis.patch.yml
 tags: [bundle, host-plugin, cordis, 已实现]
-timestamp: 2026-08-15
+timestamp: 2026-08-16
 ---
 
 # desktop-bundle(已实现,占位)
@@ -14,13 +14,14 @@ timestamp: 2026-08-15
 ## 内容
 
 - `package.json`:`"dsh": { "bundle": { "patch": "./cordis.patch.yml" } }` 声明 bundle 层身份(官方 bundle 机制);`files: [lib, cordis.patch.yml]`;依赖 `@deepseek-ai/cordis ^4.0.1`;`engines.node ^22.19 || >=24`。
-- `cordis.patch.yml`:insert `desktop-host` 行(插件 id 为 `desktop-host`,加载 `@dsh-desktop/bundle`)。
-- `src/index.ts`:`desktopHost(ctx)` 仅记录加载日志(`ctx.logger('desktop-host').info(...)`),编译产物 `lib/index.js` 由 `tsc` 生成。
+- `cordis.patch.yml`:insert `desktop-host` 行(加载 `@dsh-desktop/bundle`)与 `desktop-client` 行(加载 `@dsh-desktop/client`,使 client 插件进入 Loader 被 dsh-client-modules 发现)。
+- `src/index.ts`:最小 host 插件(空 apply,与官方 UI 插件 node 半一致)。桌面能力(用系统默认应用打开本地路径)由官方 api-gateway 的 `host.openPath` 承担(不经 shell、防注入;平台检测 nativeOpen,Windows/macOS/WSL 自动 true),不再自研 RPC。
 
 ## 职责边界(现状)
 
-- M0 阶段插件仅占位:窗口/单例/外链/生命周期全部在 Electron main 侧实现([electron-host](electron-host.md)),插件无跨进程能力。
-- 未来能力(托盘 / 原生通知 / `dsh://` 协议 / 开机自启 / 自动更新)以 Cordis 插件形式扩展,受 [constraints.md](../project/constraints.md) 安全默认约束;M1 进程内组合后与 main 同进程可直接调 Electron API。
+- host 插件保持最小:桌面能力复用官方 api-gateway(host.openPath / canOpenPath);窗口/单例/外链/生命周期在 Electron main 侧实现([electron-host](electron-host.md))。
+- 浏览器端能力由 [desktop-client](desktop-client.md) 提供(会话头部打开工作区目录按钮)。
+- 未来能力(托盘 / 原生通知 / `dsh://` 协议 / 开机自启 / 自动更新)以 Cordis 插件形式扩展,受 [constraints.md](../project/constraints.md) 安全默认约束。
 
 ## 打包集成
 
