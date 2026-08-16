@@ -9,6 +9,7 @@ allowBuilds:
   '@google/genai': true
   electron: true
   electron-winstaller: true
+  esbuild: true
   koffi: true
   node-pty: true
   protobufjs: true
