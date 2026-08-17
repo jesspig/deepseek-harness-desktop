@@ -21,6 +21,10 @@ npmRebuild: false
 
 linux:
   executableName: dsh-desktop
+  packageName: dsh-desktop
+  maintainer: jesspig
+  icon: assets/icon.png
+  artifactName: ${productName}-${version}-${arch}.${ext}
   target:
     - AppImage
     - deb
@@ -36,6 +40,7 @@ nsis:
   allowToChangeInstallationDirectory: true
 
 mac:
+  icon: assets/icon.png
   target:
     - dmg
   category: public.app-category.developer-tools
