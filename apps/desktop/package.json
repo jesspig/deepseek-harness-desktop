@@ -10,7 +10,7 @@
     "dev": "pnpm build && electron .",
     "dev:watch": "tsc -p tsconfig.json --watch",
     "build": "tsc -p tsconfig.json",
-    "dist": "pnpm build && node scripts/pack-dsh.mjs && electron-builder --config electron-builder.yml"
+    "dist": "pnpm build && node scripts/check-builder-config.mjs && node scripts/pack-dsh.mjs && electron-builder --config electron-builder.yml"
   },
   "devDependencies": {
     "@dsh-desktop/bundle": "workspace:*",
