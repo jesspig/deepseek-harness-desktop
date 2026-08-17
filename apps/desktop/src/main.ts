@@ -18,7 +18,7 @@ export function main(): void {
   let dshProcess: DshProcess;
   let lifecycleDispose: { dispose(): void } | null = null;
 
-  app.whenReady().then(() => {
+  function bootstrap(log: Log): void {
     // 窗口先行:第一行同步创建 splash 窗口,不等待后端就绪
     const t0 = Date.now();
     let quitting = false;
@@ -39,7 +39,6 @@ export function main(): void {
     fs.mkdirSync(ccDir, { recursive: true });
     process.env.NODE_COMPILE_CACHE ??= ccDir;
 
-    const log: Log = initLog(path.join(app.getPath("userData"), "logs"));
     log.info("启动打点:窗口创建完成 elapsed=" + (t1 - t0) + "ms");
     log.info(
       "应用就绪, profile=" + profile + ", dshHome=" + dshHome + ", packaged=" + app.isPackaged,
@@ -60,14 +59,15 @@ export function main(): void {
       : undefined;
     const templateDir = app.isPackaged
       ? path.join(process.resourcesPath, "template")
-      : path.join(app.getAppPath(), "..", "..", "packages", "desktop-profile", "template");
+      : path.resolve(app.getAppPath(), "..", "..", "packages", "desktop-profile", "template");
     const packagesRoot = app.isPackaged
       ? path.join(process.resourcesPath, "node_modules")
       : path.join(app.getAppPath(), "node_modules");
 
-    ensureDesktopProfile({ dshHome, templateDir, packagesRoot });
+    log.info("profile 引导开始, dshHome=" + dshHome);
+    ensureDesktopProfile({ dshHome, templateDir, packagesRoot, log });
     if (app.isPackaged) {
-      ensureProfileLinks({ dshHome, templateDir, packagesRoot });
+      ensureProfileLinks({ dshHome, templateDir, packagesRoot, log });
     }
     log.info("profile 引导完成");
 
@@ -164,6 +164,20 @@ export function main(): void {
     );
     dshProcess.spawn();
     log.info("dsh 子进程已启动");
+  }
+
+  app.whenReady().then(() => {
+    const log: Log = initLog(path.join(app.getPath("userData"), "logs"));
+    try {
+      bootstrap(log);
+    } catch (err) {
+      log.error("应用引导失败", err);
+      dialog.showErrorBox(
+        "启动失败",
+        "应用引导失败: " + (err instanceof Error ? err.message : String(err)),
+      );
+      app.quit();
+    }
   });
 
   // 常驻:关窗被拦截为隐藏,窗口不销毁,退出走 quitApp

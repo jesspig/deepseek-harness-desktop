@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
+import type { Log } from "./log";
 
 export interface ProfileBootstrapOptions {
   dshHome: string;
   templateDir: string;
   packagesRoot: string;
+  log: Log;
 }
 
 const PROFILE_NAME = "desktop";
@@ -12,6 +14,8 @@ const TEMPLATE_FILES = ["package.json", "cordis.patch.yml", "pnpm-workspace.yaml
 const REQUIRED_TEMPLATE_FILE = "package.json";
 const OPTIONAL_TEMPLATE_FILES = ["cordis.yml"];
 const LINK_SCOPES = ["@deepseek-ai", "@dsh-desktop"];
+const LINK_REMOVE_RETRY_TIMES = 3;
+const LINK_REMOVE_RETRY_INTERVAL_MS = 100;
 
 export function ensureDesktopProfile(opts: ProfileBootstrapOptions): void {
   const profileDir = path.join(opts.dshHome, "profiles", PROFILE_NAME);
@@ -47,12 +51,12 @@ export function ensureProfileLinks(opts: ProfileBootstrapOptions): void {
       if (!fs.statSync(source).isDirectory()) {
         continue;
       }
-      ensurePackageLink(source, path.join(linkScopeDir, pkg));
+      ensurePackageLink(source, path.join(linkScopeDir, pkg), opts.log);
     }
   }
 }
 
-function ensurePackageLink(target: string, linkPath: string): void {
+function ensurePackageLink(target: string, linkPath: string, log: Log): void {
   let stat: fs.Stats | null = null;
   try {
     stat = fs.lstatSync(linkPath);
@@ -60,16 +64,52 @@ function ensurePackageLink(target: string, linkPath: string): void {
     // 链接不存在,需要创建
   }
   if (stat) {
-    if (stat.isSymbolicLink()) {
-      if (fs.existsSync(linkPath) && linkTargetMatches(linkPath, target)) {
-        return;
-      }
-      fs.rmSync(linkPath, { force: true });
-    } else {
+    if (!stat.isSymbolicLink()) {
+      return;
+    }
+    if (fs.existsSync(linkPath) && linkTargetMatches(linkPath, target)) {
+      return;
+    }
+    if (!removeLink(linkPath, log)) {
+      log.error(`删除失效链接失败,跳过重建: ${linkPath}`);
       return;
     }
   }
-  fs.symlinkSync(target, linkPath, process.platform === "win32" ? "junction" : "dir");
+  createLink(target, linkPath, log);
+}
+
+/** 删除链接并有限重试;链接已被并发删除(ENOENT)视为成功 */
+function removeLink(linkPath: string, log: Log): boolean {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= LINK_REMOVE_RETRY_TIMES; attempt++) {
+    try {
+      fs.unlinkSync(linkPath);
+      return true;
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === "ENOENT") {
+        return true;
+      }
+      lastErr = err;
+      if (attempt < LINK_REMOVE_RETRY_TIMES) {
+        sleepSync(LINK_REMOVE_RETRY_INTERVAL_MS);
+      }
+    }
+  }
+  log.error(`删除链接失败(已重试 ${LINK_REMOVE_RETRY_TIMES} 次): ${linkPath}`, lastErr);
+  return false;
+}
+
+function createLink(target: string, linkPath: string, log: Log): void {
+  try {
+    fs.symlinkSync(target, linkPath, process.platform === "win32" ? "junction" : "dir");
+  } catch (err) {
+    log.error(`创建链接失败: ${linkPath} -> ${target}`, err);
+  }
+}
+
+function sleepSync(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
 /** 解析链接真实目标并与期望目标比较;任一侧不可解析视为不一致 */

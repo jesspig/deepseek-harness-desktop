@@ -1,7 +1,7 @@
 import { Menu, Tray, nativeImage } from "electron";
+import * as path from "node:path";
 
-const ICON_DATA_URL =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABSSURBVDhP3cyxDYAwFAPRbMgmrE8J4hcpXoKlNBQ56TqfW9uT47zuL90OGMy06ThM2haOkraFo6TtUjw9eHGUtC0cJW0LR0nbjsOZNgMGS/HvPO6uKPqR4mX2AAAAAElFTkSuQmCC";
+const ICON_PATH = path.join(__dirname, "..", "assets", "icon.png");
 
 export interface AppTrayOptions {
   onShow: () => void;
@@ -9,7 +9,7 @@ export interface AppTrayOptions {
 }
 
 export function createAppTray(opts: AppTrayOptions): Tray {
-  const tray = new Tray(nativeImage.createFromDataURL(ICON_DATA_URL));
+  const tray = new Tray(nativeImage.createFromPath(ICON_PATH).resize({ width: 16, height: 16 }));
   tray.setToolTip("DeepSeek Harness Desktop");
   tray.setContextMenu(
     Menu.buildFromTemplate([
