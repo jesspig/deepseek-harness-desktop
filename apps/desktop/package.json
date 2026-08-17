@@ -2,6 +2,8 @@
   "name": "@dsh-desktop/app",
   "version": "0.1.1",
   "private": true,
+  "description": "DeepSeek Harness desktop shell",
+  "homepage": "https://github.com/jesspig/deepseek-harness-desktop",
   "main": "dist/main.js",
   "type": "commonjs",
   "scripts": {
