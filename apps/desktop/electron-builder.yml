@@ -20,6 +20,7 @@ extraResources:
 npmRebuild: false
 
 linux:
+  executableName: dsh-desktop
   target:
     - AppImage
     - deb
