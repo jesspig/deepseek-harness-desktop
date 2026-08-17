@@ -37,17 +37,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macos-13 为 Intel x64 runner,macos-14 为 Apple Silicon arm64
+          # macos-15-intel 为 Intel x64 runner(取代已退役的 macos-13),
+          # macos-15 为 Apple Silicon arm64(取代即将 EOL 的 macos-14)
           - os: windows-latest
             platform: windows
             arch: x64
           - os: ubuntu-latest
             platform: linux
             arch: x64
-          - os: macos-13
+          - os: macos-15-intel
             platform: mac
             arch: x64
-          - os: macos-14
+          - os: macos-15
             platform: mac
             arch: arm64
     steps:
@@ -58,7 +59,7 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: 11.17.0
-          cache: pnpm
+          cache: true
 
       - name: 安装 Node 24
         uses: actions/setup-node@v4
