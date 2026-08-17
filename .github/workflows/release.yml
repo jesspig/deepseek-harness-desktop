@@ -1,6 +1,8 @@
-# 三平台自动打包发布:tag 触发(vX.Y.Z 与 X.Y.Z 均兼容),四 job 并行构建,
-# Windows x64 / Linux x64 / macOS x64(Intel)+ arm64(Apple Silicon)产物
-# 汇总后发布 GitHub Release。
+# 跨平台自动打包发布:tag 触发(vX.Y.Z 与 X.Y.Z 均兼容)或手动指定已存在 tag。
+# Windows x64 / Linux x64 / macOS x64(Intel)+ arm64(Apple Silicon)四 job 并行,
+# 产物汇总发布 GitHub Release;tag 含 prerelease 后缀时自动标记为预发布。
+# profile 模板使用仓库已提交版本(packages/desktop-profile/template),
+# 上游 dsh 升级后本地重跑 generate-profile.mjs 并提交,发布流程不联网生成。
 name: release
 
 on:
@@ -8,14 +10,29 @@ on:
     tags:
       - 'v*.*.*'
       - '*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 已存在的版本 tag(如 v0.1.0),留空表示使用当前 ref
+        required: false
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
+
+env:
+  # 禁用 electron-builder 自动发布(tag 触发时其默认 onTagOrDraft 会重复建 Release),
+  # 统一由下方 release job 的 softprops 步骤发布
+  GH_TOKEN: ''
 
 jobs:
   build:
     name: build (${{ matrix.platform }} ${{ matrix.arch }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -55,22 +72,17 @@ jobs:
       - name: 编译 bundle
         run: pnpm --filter @dsh-desktop/bundle build
 
-      - name: 安装 dsh CLI
-        run: npm install -g @deepseek-ai/dsh@0.1.0-rc.6
-
       - name: 注入 tag 版本
-        run: node apps/desktop/scripts/set-version.mjs "${{ github.ref_name }}"
+        run: node apps/desktop/scripts/set-version.mjs "${{ inputs.tag || github.ref_name }}"
 
-      - name: 生成 profile 模板
-        run: node apps/desktop/scripts/generate-profile.mjs --dsh-bin dsh --out packages/desktop-profile/template --home "${{ runner.temp }}/dsh-profile-home" --bundle "${{ github.workspace }}/packages/desktop-bundle"
-
-      # electron-builder 缓存按平台分目录缓存(Windows 与 POSIX 缓存位置不同)
+      # electron-builder 缓存按平台分目录缓存,key 随 lockfile 失效,
+      # electron 版本升级时自动重建(Windows 与 POSIX 缓存位置不同)
       - name: 缓存 electron-builder(Windows)
         if: matrix.os == 'windows-latest'
         uses: actions/cache@v4
         with:
           path: '%LOCALAPPDATA%\electron-builder\Cache'
-          key: electron-builder-${{ runner.os }}
+          key: electron-builder-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             electron-builder-${{ runner.os }}
 
@@ -79,14 +91,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/electron-builder
-          key: electron-builder-${{ runner.os }}
+          key: electron-builder-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             electron-builder-${{ runner.os }}
 
       - name: 构建打包
         run: pnpm --filter @dsh-desktop/app dist
 
-      # 只传安装包,不传 win-unpacked 等中间目录
       - name: 上传产物(Windows)
         if: matrix.platform == 'windows'
         uses: actions/upload-artifact@v4
@@ -95,7 +106,9 @@ jobs:
           path: |
             build/release/*.exe
             build/release/*.blockmap
+            build/release/latest.yml
           if-no-files-found: error
+          retention-days: 1
 
       - name: 上传产物(Linux)
         if: matrix.platform == 'linux'
@@ -105,20 +118,26 @@ jobs:
           path: |
             build/release/*.AppImage
             build/release/*.deb
+            build/release/latest-linux.yml
           if-no-files-found: error
+          retention-days: 1
 
       - name: 上传产物(macOS)
         if: matrix.platform == 'mac'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}-${{ matrix.arch }}
-          path: build/release/*.dmg
+          path: |
+            build/release/*.dmg
+            build/release/latest-mac.yml
           if-no-files-found: error
+          retention-days: 1
 
   release:
     name: publish release
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: 下载全部产物
         uses: actions/download-artifact@v4
@@ -128,4 +147,7 @@ jobs:
       - name: 发布 Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
           files: artifacts/**/*
+          generate_release_notes: true
+          prerelease: ${{ contains(inputs.tag || github.ref_name, '-') }}
