@@ -2,11 +2,12 @@ appId: com.dshdesktop.app
 productName: DeepSeek Harness Desktop
 
 directories:
-  output: release/
+  output: ../../build/release
 
 files:
   - dist/**
   - package.json
+  - assets/**
 
 asar: true
 
@@ -18,10 +19,22 @@ extraResources:
 
 npmRebuild: false
 
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Development
+
 win:
   target:
     - target: nsis
+  icon: assets/icon.ico
 
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+
+mac:
+  target:
+    - dmg
+  category: public.app-category.developer-tools

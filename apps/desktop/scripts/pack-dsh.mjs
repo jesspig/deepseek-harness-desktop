@@ -64,8 +64,121 @@ function log(message) {
   process.stdout.write(`[pack-dsh] ${message}\n`);
 }
 
-function copyTree(src, dest) {
-  fs.cpSync(src, dest, { recursive: true, dereference: true });
+// 非运行必需文件的扩展名(大小写不敏感,.d.ts/.d.mts 由 .ts/.mts 覆盖)
+const SKIP_EXTENSIONS = new Set([
+  '.pdb',
+  '.map',
+  '.d.ts',
+  '.d.mts',
+  '.ts',
+  '.mts',
+  '.cc',
+  '.h',
+  '.c',
+  '.cpp',
+  '.hpp',
+  '.md',
+]);
+// 文档文件名前缀(大小写不敏感);仅对非运行必需扩展名生效
+const SKIP_NAME_PREFIXES = [
+  'license',
+  'readme',
+  'changelog',
+  'notice',
+  'authors',
+  'copyright',
+  'security',
+];
+// 运行必需扩展名,一律保留(安全优先,见任务保留清单)
+const RUNTIME_EXTENSIONS = [
+  '.js',
+  '.mjs',
+  '.cjs',
+  '.json',
+  '.node',
+  '.dll',
+  '.exe',
+  '.ttf',
+  '.wasm',
+];
+
+function isRuntimeName(name) {
+  const lower = name.toLowerCase();
+  return RUNTIME_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+
+function shouldSkipFile(name) {
+  const lower = name.toLowerCase();
+  if (SKIP_EXTENSIONS.has(path.extname(lower))) {
+    return true;
+  }
+  // 文档类文件才应用名称前缀过滤,避免误删 license.js 等运行必需文件
+  if (
+    !isRuntimeName(lower) &&
+    SKIP_NAME_PREFIXES.some((prefix) => lower.startsWith(prefix))
+  ) {
+    return true;
+  }
+  return false;
+}
+
+// node-pty 错误平台变体目录(不得影响 win32-x64 与 build/Release)
+function isNodePtyDir(segments, rootName) {
+  const lower = segments.map((s) => s.toLowerCase());
+  const isNodePty =
+    rootName === 'node-pty' || rootName === '@node-pty' || lower.includes('node-pty');
+  if (!isNodePty) {
+    return false;
+  }
+  if (lower.includes('prebuilds') && lower.includes('win32-arm64')) {
+    return true;
+  }
+  if (lower.includes('third_party') && lower.includes('win10-arm64')) {
+    return true;
+  }
+  return false;
+}
+
+// 带过滤的复制,保留 dereference 语义(符号链接解析到实体后实体复制)
+const filterSkip = { files: 0, dirs: 0 };
+function copyTree(src, dest, rootName, segments = []) {
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const srcFull = path.join(src, entry.name);
+    const destFull = path.join(dest, entry.name);
+    if (entry.isDirectory()) {
+      if (isNodePtyDir([...segments, entry.name], rootName)) {
+        filterSkip.dirs += 1;
+        log(`跳过平台变体目录: ${srcFull}`);
+        continue;
+      }
+      copyTree(srcFull, destFull, rootName, [...segments, entry.name]);
+      continue;
+    }
+    if (entry.isSymbolicLink()) {
+      const real = fs.realpathSync(srcFull);
+      const realStat = fs.statSync(real);
+      if (realStat.isDirectory()) {
+        if (isNodePtyDir([...segments, entry.name], rootName)) {
+          filterSkip.dirs += 1;
+          log(`跳过平台变体目录: ${srcFull}`);
+          continue;
+        }
+        copyTree(real, destFull, rootName, [...segments, entry.name]);
+      } else if (shouldSkipFile(entry.name)) {
+        filterSkip.files += 1;
+        continue;
+      } else {
+        fs.copyFileSync(real, destFull);
+      }
+      continue;
+    }
+    if (shouldSkipFile(entry.name)) {
+      filterSkip.files += 1;
+      continue;
+    }
+    fs.copyFileSync(srcFull, destFull);
+  }
 }
 
 function removeInvalidLinks(dir) {
@@ -158,7 +271,7 @@ function copyTopLevelDeps(deps) {
       missing.push(dep);
       continue;
     }
-    copyTree(src, path.join(OUT_NODE_MODULES, ...rel));
+    copyTree(src, path.join(OUT_NODE_MODULES, ...rel), dep);
   }
   return missing;
 }
@@ -174,6 +287,19 @@ function dirSize(dir) {
     }
   }
   return total;
+}
+
+function countFiles(dir) {
+  let count = 0;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      count += countFiles(full);
+    } else if (entry.isFile()) {
+      count += 1;
+    }
+  }
+  return count;
 }
 
 function formatSize(bytes) {
@@ -193,7 +319,7 @@ function main() {
   fs.mkdirSync(OUT_NODE_MODULES, { recursive: true });
 
   log(`复制 ${deepseekSrc} → ${OUT_NODE_MODULES}/@deepseek-ai(dereference)`);
-  copyTree(deepseekSrc, path.join(OUT_NODE_MODULES, '@deepseek-ai'));
+  copyTree(deepseekSrc, path.join(OUT_NODE_MODULES, '@deepseek-ai'), '@deepseek-ai');
 
   const dshDesktopCandidates = [
     path.join(DESKTOP_DIR, 'node_modules', '@dsh-desktop'),
@@ -211,7 +337,7 @@ function main() {
   log(`复制 ${dshDesktopReal} → ${dshDesktopOut}(逐包解析链接后实体复制)`);
   for (const entry of fs.readdirSync(dshDesktopReal, { withFileTypes: true })) {
     const entryReal = fs.realpathSync(path.join(dshDesktopReal, entry.name));
-    copyTree(entryReal, path.join(dshDesktopOut, entry.name));
+    copyTree(entryReal, path.join(dshDesktopOut, entry.name), entry.name);
   }
   removeBundleNodeModules();
   removeInvalidLinks(dshDesktopOut);
@@ -257,7 +383,7 @@ function main() {
         log(`跳过缺失的可选依赖: ${dep}`);
         continue;
       }
-      copyTree(src, path.join(OUT_NODE_MODULES, ...rel));
+      copyTree(src, path.join(OUT_NODE_MODULES, ...rel), dep);
     }
   }
 
@@ -267,6 +393,8 @@ function main() {
   }
   log(`校验通过: ${DSH_PKG} 存在`);
   log(`体积: ${formatSize(dirSize(OUT_DIR))}(${OUT_DIR})`);
+  log(`过滤后产物: ${countFiles(OUT_DIR)} 文件 / ${formatSize(dirSize(OUT_DIR))}`);
+  log(`过滤跳过: ${filterSkip.files} 文件 / ${filterSkip.dirs} 目录`);
 }
 
 try {

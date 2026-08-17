@@ -42,21 +42,18 @@ export function installLifecycle(opts: {
     app.quit();
   };
 
-  const onWindowClosed = (): void => {
-    void stopProcess().then(() => quitOnce());
-  };
-
+  // 窗口 close 已被 main 拦截为隐藏,closed 不再发生(除非退出时);退出由 main 的 quitApp 负责
   const onChildExit = (code: number | null, signal: string | null): void => {
     if (window.isDestroyed() || quitting) {
       return;
     }
-    hooks.log.error(`dsh 子进程意外退出 (code=${code}, signal=${signal})`);
     hooks.onChildExit(code, signal);
     quitOnce();
   };
 
   void opts.process.exited.then((code) => onChildExit(code, null)).catch(() => {});
 
+  // 兜底:防漏,幂等;与 main 的 before-quit 共存
   const onBeforeQuit = (event: Event): void => {
     if (stopDone || quitting) {
       return;
@@ -69,7 +66,6 @@ export function installLifecycle(opts: {
     dispose();
   };
 
-  window.on("closed", onWindowClosed);
   app.on("before-quit", onBeforeQuit);
   app.on("will-quit", onWillQuit);
 
@@ -78,7 +74,6 @@ export function installLifecycle(opts: {
       return;
     }
     disposed = true;
-    window.removeListener("closed", onWindowClosed);
     app.removeListener("before-quit", onBeforeQuit);
     app.removeListener("will-quit", onWillQuit);
   }

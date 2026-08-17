@@ -43,7 +43,10 @@
  *   7. 复制模板:package.json、cordis.patch.yml、pnpm-workspace.yaml 三个
  *      清单文件到 --out(先清空 --out,幂等);package.json 缺失抛错,
  *      其余文件存在则复制、缺失跳过;cordis.yml 若存在也一并复制
- *      (官方 plugin add 产物不含 cordis.yml,非必需)
+ *      (官方 plugin add 产物不含 cordis.yml,非必需);随后对生成的
+ *      package.json 做 link 绝对路径规范化(本地目录包依赖形如
+ *      link:<绝对路径> 的值改写为相对 --out 的相对路径,统一正斜杠),
+ *      保证模板输出可移植、克隆后仍有效
  *
  * 参数(--key value 手写解析,不引依赖):
  *   --dsh-bin <path>  dsh 可执行文件路径(Windows 下可传 .cmd shim)
@@ -210,6 +213,35 @@ function resolveBundleName(value) {
   return value;
 }
 
+/**
+ * 规范化 package.json 中 link 依赖的绝对路径。
+ *
+ * pnpm add 本地目录包时会把 link 值写成绝对路径(如
+ * link:C:/Users/.../packages/desktop-bundle),导致生成的模板携带本机绝对路径、不可移植。
+ * 本函数把 outDir 下 package.json 里形如 link:<绝对路径> 的依赖值改写为相对 outDir 的
+ * 相对路径(统一正斜杠),相对路径解析到仓库内目标包目录,克隆后仍有效。非绝对路径
+ * (已是相对 link 或纯包名)原样保留。仅在确有改写时写回,沿用原文件 2 空格缩进。
+ */
+function normalizeDependencyLinks(outDir, manifestPath) {
+  const raw = fs.readFileSync(manifestPath, 'utf8');
+  const manifest = JSON.parse(raw);
+  const deps = manifest.dependencies;
+  if (!deps || typeof deps !== 'object') return;
+  let changed = false;
+  for (const [name, spec] of Object.entries(deps)) {
+    if (typeof spec !== 'string' || !spec.startsWith('link:')) continue;
+    const target = spec.slice('link:'.length);
+    if (!path.isAbsolute(target)) continue;
+    const rel = path.relative(outDir, target).split(path.sep).join('/');
+    const normalized = rel === '' || rel.startsWith('.') ? rel : `./${rel}`;
+    deps[name] = `link:${normalized}`;
+    changed = true;
+  }
+  if (!changed) return;
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + `\n`);
+  log('已规范化 link 绝对路径为相对路径(相对模板目录)');
+}
+
 function validateProfile(profileDir, expectedBundles) {
   const manifestPath = path.join(profileDir, 'package.json');
   const patchPath = path.join(profileDir, 'cordis.patch.yml');
@@ -361,6 +393,10 @@ function main() {
     }
     fs.copyFileSync(src, dest);
   }
+
+  // 规范化生成 package.json 中 link 依赖的绝对路径(如 bundle 本地目录的 link),
+  // 使模板输出相对、可移植,克隆后仍有效
+  normalizeDependencyLinks(out, path.join(out, REQUIRED_TEMPLATE_FILE));
 
   log(`模板已生成: ${out}`);
   log(`dsh.profile.bundles: ${manifest.dsh.profile.bundles.join(', ')}`);

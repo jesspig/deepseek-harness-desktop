@@ -4,7 +4,7 @@ title: 构建与工具链约定
 description: pnpm workspace、TypeScript、electron-builder、Node 版本等工具链事实与构建命令
 resource: ../../../pnpm-workspace.yaml
 tags: [pnpm, typescript, electron-builder, tooling]
-timestamp: 2026-08-15
+timestamp: 2026-08-16
 ---
 
 # 构建与工具链约定
@@ -29,13 +29,13 @@ timestamp: 2026-08-15
 | `pnpm install` | 安装依赖(根 `allowBuilds` 已声明原生依赖构建许可) |
 | `pnpm dev` | `apps/desktop`:tsc 编译 + `electron .`(开发模式用 PATH 中的 dsh) |
 | `pnpm build` | tsc 编译 desktop app |
-| `pnpm dist` | `pack-dsh.mjs`(复制 dsh 依赖树到 `release-resources/`)+ electron-builder(NSIS 安装包) |
+| `pnpm dist` / `pnpm package` | 先构建 `@dsh-desktop/bundle` 与 `@dsh-desktop/client`,再 `pack-dsh.mjs`(复制 dsh 依赖树到 `release-resources/`)+ electron-builder(NSIS 安装包) |
 
 ## 打包流水线
 
-1. `scripts/pack-dsh.mjs`:从根 node_modules(hoisted,全实体)不动点收集并复制 dsh 运行所需依赖到 `apps/desktop/release-resources/node_modules`(dereference,删除失效链接与 bundle 包内冗余 node_modules;校验 `@deepseek-ai/dsh` 与 `@dsh-desktop/bundle` 存在,输出体积)。
-2. `electron-builder.yml`:`files: [dist/**, package.json]` 进 asar;`extraResources` 把 `release-resources/node_modules` 映射到安装目录 `resources/node_modules`,把 `packages/desktop-profile/template` 映射到 `resources/template`。
-3. 产物:`apps/desktop/release/DeepSeek Harness Desktop Setup <version>.exe`(NSIS,oneClick 关闭,允许自选安装目录)。
+1. `scripts/pack-dsh.mjs`:从根 node_modules(hoisted,全实体)不动点收集并复制 dsh 运行所需依赖到 `apps/desktop/release-resources/node_modules`(dereference,删除失效链接与 bundle 包内冗余 node_modules;校验 `@deepseek-ai/dsh` 与 `@dsh-desktop/bundle` 存在,输出体积)。复制时过滤非运行必需文件:`.pdb`/`.map`/`.d.ts`/`.d.mts`/`.ts`/`.mts` 源码与类型声明、C/C++ 源码(`.cc`/`.h` 等)、文档(LICENSE/README/CHANGELOG 等)、node-pty 错误平台 prebuilds(win32-arm64);保留全部 `.js`/`.mjs`/`.cjs`/`.json`/`.node`/`.dll`/`.exe`/`.ttf`/`.wasm`。产物由 245.4MB / 32756 文件降至 **107.9MB / 12195 文件**(启动加速 feature/startup-acceleration)。
+2. `electron-builder.yml`:`files: [dist/**, package.json, assets/**]` 进 asar(assets 含品牌图标 icon.png);`win.icon: assets/icon.png` 生成 exe 图标;`extraResources` 把 `release-resources/node_modules` 映射到安装目录 `resources/node_modules`,把 `packages/desktop-profile/template` 映射到 `resources/template`。
+3. 产物:`build/release/DeepSeek Harness Desktop Setup <version>.exe`(NSIS,oneClick 关闭,允许自选安装目录;`build/release/win-unpacked/` 为免安装版;electron-builder 输出目录由 `apps/desktop/electron-builder.yml` 的 `directories.output: ../../build/release` 指向仓库根 `build/` 下)。
 
 ## 运行时依赖解析约定
 
