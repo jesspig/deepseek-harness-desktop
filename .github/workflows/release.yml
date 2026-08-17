@@ -93,8 +93,8 @@ jobs:
         with:
           name: ${{ matrix.platform }}-${{ matrix.arch }}
           path: |
-            apps/desktop/release/*.exe
-            apps/desktop/release/*.blockmap
+            build/release/*.exe
+            build/release/*.blockmap
           if-no-files-found: error
 
       - name: 上传产物(Linux)
@@ -103,8 +103,8 @@ jobs:
         with:
           name: ${{ matrix.platform }}-${{ matrix.arch }}
           path: |
-            apps/desktop/release/*.AppImage
-            apps/desktop/release/*.deb
+            build/release/*.AppImage
+            build/release/*.deb
           if-no-files-found: error
 
       - name: 上传产物(macOS)
@@ -112,7 +112,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}-${{ matrix.arch }}
-          path: apps/desktop/release/*.dmg
+          path: build/release/*.dmg
           if-no-files-found: error
 
   release:
